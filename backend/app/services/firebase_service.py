@@ -25,7 +25,8 @@ class FirebaseService:
         content: str,
         role: str = "user",
         quoted_message_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        topic_id: Optional[str] = None
     ) -> str:
         """Add a new message to Firestore.
         
@@ -35,6 +36,7 @@ class FirebaseService:
             role: 'user' or 'assistant'
             quoted_message_id: Optional ID of the message being quoted
             metadata: Additional metadata to store with the message
+            topic_id: Optional ID of the topic this message belongs to
             
         Returns:
             str: The ID of the created message
@@ -45,7 +47,8 @@ class FirebaseService:
             "role": role,
             "timestamp": SERVER_TIMESTAMP,
             "quoted_message_id": quoted_message_id,
-            "metadata": metadata or {}
+            "metadata": metadata or {},
+            "topic_id": topic_id
         }
         
         try:
@@ -149,6 +152,47 @@ class FirebaseService:
         except Exception as e:
             logger.error(f"Error adding summary: {str(e)}")
             raise
+    
+    @staticmethod
+    async def update_message(
+        message_id: str, 
+        update_data: Dict[str, Any]
+    ) -> bool:
+        """Update a message with new data.
+        
+        Args:
+            message_id: ID of the message to update
+            update_data: Dictionary of fields to update
+            
+        Returns:
+            bool: True if update was successful, False otherwise
+        """
+        try:
+            doc_ref = db.collection(MESSAGES_COLLECTION).document(message_id)
+            doc = doc_ref.get()
+            
+            if not doc.exists:
+                logger.warning(f"Message {message_id} not found for update")
+                return False
+                
+            # Don't allow updating certain fields
+            protected_fields = ["id", "user_id", "timestamp"]
+            update_data = {
+                k: v for k, v in update_data.items() 
+                if k not in protected_fields and v is not None
+            }
+            
+            if not update_data:
+                logger.warning("No valid fields to update")
+                return False
+                
+            doc_ref.update(update_data)
+            logger.info(f"Updated message {message_id} with fields: {list(update_data.keys())}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating message {message_id}: {str(e)}")
+            return False
     
     @staticmethod
     async def get_summaries(user_id: str, limit: int = 10) -> List[Dict[str, Any]]:

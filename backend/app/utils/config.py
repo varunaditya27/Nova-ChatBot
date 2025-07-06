@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     # Security
     secret_key: str = Field("your-secret-key-here", env="SECRET_KEY")
     access_token_expire_minutes: int = Field(30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
+    
+    # Cache Settings
+    redis_url: str = Field("redis://localhost:6379", env="REDIS_URL")
+    cache_ttl: int = Field(300, env="CACHE_TTL")  # 5 minutes default
+    cache_enabled: bool = Field(True, env="CACHE_ENABLED")
 
     class Config:
         env_file = os.getenv("ENV_FILE", ".env")
